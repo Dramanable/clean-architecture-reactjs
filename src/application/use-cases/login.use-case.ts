@@ -23,7 +23,7 @@ export class LoginUseCase {
         name: authResponse.user.name,
         role: authResponse.user.role,
         avatar: authResponse.user.avatar,
-        lastLogin: authResponse.user.lastLogin?.toISOString()
+        lastLogin: authResponse.user.lastLoginAt?.toISOString()
       },
       tokens: {
         accessToken: authResponse.tokens.accessToken,

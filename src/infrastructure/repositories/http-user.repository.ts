@@ -1,46 +1,42 @@
 import type { UserRepository, PaginationParams, UserFilters, PaginatedResult } from '../../domain/repositories/user.repository'
-import type { User, UserRole, UserStatus } from '../../domain/entities/user.entity'
-import { UserEntity } from '../../domain/entities/user.entity'
+import type { User } from '../../domain/entities/user.entity'
+import { UserRole, UserStatus, UserEntity } from '../../domain/entities/user.entity'
 import { httpClient } from '../http/http-client'
 import type { 
-  UserResponseDto, 
-  CreateUserDto, 
-  UpdateUserDto,
-  PaginatedResponseDto,
-  UserRole as ApiUserRole
+  UserResponse, 
+  CreateUserRequest, 
+  UpdateUserRequest,
+  UsersListResponse
 } from '../dtos/api.dto'
+import { UserRole as ApiUserRole } from '../dtos/api.dto'
 
 export class HttpUserRepository implements UserRepository {
   async findAll(params: PaginationParams, filters?: UserFilters): Promise<PaginatedResult<User>> {
     try {
       const queryParams: Record<string, unknown> = {
         page: params.page,
-        limit: params.limit,
-        sortBy: 'createdAt',
-        sortOrder: 'desc'
+        limit: params.limit
       }
 
       if (filters) {
         if (filters.search) queryParams.search = filters.search
         if (filters.role) queryParams.role = filters.role
         if (filters.status) queryParams.status = filters.status
-        if (filters.createdAfter) queryParams.createdAfter = filters.createdAfter.toISOString()
-        if (filters.createdBefore) queryParams.createdBefore = filters.createdBefore.toISOString()
       }
 
-      const response = await httpClient.get<PaginatedResponseDto<UserResponseDto>>('/users', queryParams)
+      const response = await httpClient.get<UsersListResponse>('/users', queryParams)
       
-      const users = response.data.data.map(userDto => this.mapUserResponseDtoToUserEntity(userDto))
+      const users = response.data.users.map(userDto => this.mapUserResponseToUserEntity(userDto))
       
       return {
         data: users,
         meta: {
-          currentPage: response.data.meta.page,
-          totalPages: response.data.meta.totalPages,
-          totalItems: response.data.meta.total,
-          itemsPerPage: response.data.meta.limit,
-          hasNextPage: response.data.meta.hasNextPage,
-          hasPreviousPage: response.data.meta.hasPrevPage
+          currentPage: response.data.page,
+          totalPages: Math.ceil(response.data.total / response.data.limit),
+          totalItems: response.data.total,
+          itemsPerPage: response.data.limit,
+          hasNextPage: response.data.page * response.data.limit < response.data.total,
+          hasPreviousPage: response.data.page > 1
         }
       }
     } catch (error) {
@@ -51,8 +47,8 @@ export class HttpUserRepository implements UserRepository {
 
   async findById(id: string): Promise<User | null> {
     try {
-      const response = await httpClient.get<UserResponseDto>(`/users/${id}`)
-      return this.mapUserResponseDtoToUserEntity(response.data)
+      const response = await httpClient.get<UserResponse>(`/users/${id}`)
+      return this.mapUserResponseToUserEntity(response.data)
     } catch (error) {
       console.error(`Failed to fetch user ${id}:`, error)
       return null
@@ -61,8 +57,8 @@ export class HttpUserRepository implements UserRepository {
 
   async findByEmail(email: string): Promise<User | null> {
     try {
-      const response = await httpClient.get<UserResponseDto>(`/users/email/${email}`)
-      return this.mapUserResponseDtoToUserEntity(response.data)
+      const response = await httpClient.get<UserResponse>(`/users/email/${email}`)
+      return this.mapUserResponseToUserEntity(response.data)
     } catch (error) {
       console.error(`Failed to fetch user by email ${email}:`, error)
       return null
@@ -71,15 +67,14 @@ export class HttpUserRepository implements UserRepository {
 
   async create(userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
     try {
-      const createData: CreateUserDto = {
+      const createData: CreateUserRequest = {
         email: userData.email,
         name: userData.name,
-        password: 'defaultPassword123', // Dans un vrai système, ceci serait géré autrement
-        role: userData.role as ApiUserRole // Conversion du type enum
+        role: this.mapDomainRoleToApiRole(userData.role)
       }
 
-      const response = await httpClient.post<UserResponseDto>('/users', createData)
-      return this.mapUserResponseDtoToUserEntity(response.data)
+      const response = await httpClient.post<UserResponse>('/users', createData)
+      return this.mapUserResponseToUserEntity(response.data)
     } catch (error) {
       console.error('Failed to create user:', error)
       throw new Error('Failed to create user')
@@ -88,14 +83,15 @@ export class HttpUserRepository implements UserRepository {
 
   async update(id: string, userData: Partial<Omit<User, 'id' | 'createdAt'>>): Promise<User> {
     try {
-      const updateData: UpdateUserDto = {
+      const updateData: UpdateUserRequest = {
         email: userData.email,
         name: userData.name,
-        role: userData.role as ApiUserRole // Conversion du type enum
+        ...(userData.role && { role: this.mapDomainRoleToApiRole(userData.role) }),
+        ...(userData.status !== undefined && { isActive: userData.status === 'active' })
       }
 
-      const response = await httpClient.patch<UserResponseDto>(`/users/${id}`, updateData)
-      return this.mapUserResponseDtoToUserEntity(response.data)
+      const response = await httpClient.patch<UserResponse>(`/users/${id}`, updateData)
+      return this.mapUserResponseToUserEntity(response.data)
     } catch (error) {
       console.error(`Failed to update user ${id}:`, error)
       throw new Error('Failed to update user')
@@ -138,16 +134,43 @@ export class HttpUserRepository implements UserRepository {
     }
   }
 
-  private mapUserResponseDtoToUserEntity(userDto: UserResponseDto): UserEntity {
+  private mapUserResponseToUserEntity(userDto: UserResponse): UserEntity {
     return new UserEntity(
       userDto.id,
       userDto.email,
       userDto.name,
-      userDto.role as UserRole,
-      'active' as UserStatus, // Par défaut, on peut ajouter ce champ dans l'API plus tard
+      this.mapApiRoleToDomainRole(userDto.role),
+      userDto.isActive ? UserStatus.ACTIVE : UserStatus.INACTIVE,
       new Date(userDto.createdAt),
-      new Date(userDto.updatedAt),
-      userDto.lastLoginAt ? new Date(userDto.lastLoginAt) : undefined
+      new Date(userDto.updatedAt)
     )
+  }
+
+  private mapDomainRoleToApiRole(role: UserRole): ApiUserRole {
+    // Mapping entre les rôles du domain et de l'API
+    switch (role) {
+      case UserRole.ADMIN:
+        return 'SUPER_ADMIN' as ApiUserRole
+      case UserRole.MODERATOR:
+        return 'MANAGER' as ApiUserRole
+      case UserRole.USER:
+        return 'USER' as ApiUserRole
+      default:
+        return 'USER' as ApiUserRole
+    }
+  }
+
+  private mapApiRoleToDomainRole(role: ApiUserRole): UserRole {
+    // Mapping entre les rôles de l'API et du domain
+    switch (role) {
+      case 'SUPER_ADMIN':
+        return UserRole.ADMIN
+      case 'MANAGER':
+        return UserRole.MODERATOR
+      case 'USER':
+        return UserRole.USER
+      default:
+        return UserRole.USER
+    }
   }
 }

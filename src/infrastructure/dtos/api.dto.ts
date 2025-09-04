@@ -1,71 +1,61 @@
-// DTOs pour l'API NestJS basés sur le Swagger http://localhost:3000/api/docs
+// DTOs pour l'API NestJS basés sur le Swagger officiel
 
 // Auth DTOs
-export interface LoginDto {
+export interface LoginRequest {
   email: string
   password: string
 }
 
-export interface LoginResponseDto {
-  access_token: string
-  refresh_token: string
-  expires_in: number
-  user: UserResponseDto
+export interface LoginResponse {
+  accessToken: string
+  user: UserResponse
 }
 
-export interface RefreshTokenResponseDto {
-  access_token: string
-  refresh_token: string
-  expires_in: number
-}
-
-export interface LogoutResponseDto {
-  message: string
-}
-
-export interface UserInfoResponseDto {
-  id: string
-  email: string
-  name: string
-  role: UserRole
-  createdAt: string
-  updatedAt: string
-  lastLoginAt?: string
+export interface RefreshTokenResponse {
+  accessToken: string
 }
 
 // User DTOs
-export interface UserResponseDto {
+export interface UserResponse {
   id: string
   email: string
   name: string
   role: UserRole
+  isActive: boolean
   createdAt: string
   updatedAt: string
-  lastLoginAt?: string
 }
 
-export interface CreateUserDto {
+export interface CreateUserRequest {
   email: string
   name: string
-  password: string
   role?: UserRole
 }
 
-export interface UpdateUserDto {
-  email?: string
+export interface UpdateUserRequest {
   name?: string
+  email?: string
   role?: UserRole
+  isActive?: boolean
 }
 
-// User Role Enum
+// User Role Enum - selon le Swagger
 export enum UserRole {
-  ADMIN = 'admin',
-  MODERATOR = 'moderator', 
-  USER = 'user'
+  USER = 'USER',
+  MANAGER = 'MANAGER',
+  SUPER_ADMIN = 'SUPER_ADMIN'
+}
+
+// Users List Response - selon le Swagger
+export interface UsersListResponse {
+  users: UserResponse[]
+  total: number
+  page: number
+  limit: number
 }
 
 // Error DTOs
-export interface ApiErrorResponseDto {
+export interface ApiErrorResponse {
   message: string
   error: string
   statusCode: number
@@ -73,33 +63,9 @@ export interface ApiErrorResponseDto {
   path: string
 }
 
-export interface ValidationErrorDto extends ApiErrorResponseDto {
-  details: Array<{
-    field: string
-    message: string
-  }>
-}
-
-// Pagination DTOs (génériques)
-export interface PaginationDto {
-  page: number
-  limit: number
-  search?: string
-  sortBy?: string
-  sortOrder?: 'asc' | 'desc'
-}
-
-export interface PaginatedResponseDto<T> {
-  data: T[]
-  meta: {
-    total: number
-    page: number
-    limit: number
-    totalPages: number
-    hasNextPage: boolean
-    hasPrevPage: boolean
-  }
-}
-
 // Types pour compatibilité avec le domain
-export type UserDto = UserResponseDto
+export type UserDto = UserResponse
+export type LoginDto = LoginRequest
+export type LoginResponseDto = LoginResponse
+export type CreateUserDto = CreateUserRequest
+export type UpdateUserDto = UpdateUserRequest

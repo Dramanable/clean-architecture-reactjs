@@ -1,137 +1,142 @@
 import type { AuthRepository } from '../../domain/repositories/auth.repository'
-import type { AuthUser, LoginCredentials, AuthResponse } from '../../domain/entities/auth.entity'
+import type { AuthUser, LoginCredentials, AuthResponse, AuthTokens } from '../../domain/entities/auth.entity'
 import { AuthEntity } from '../../domain/entities/auth.entity'
 import { httpClient } from '../http/http-client'
-import type { 
-  LoginDto, 
-  LoginResponseDto, 
-  RefreshTokenResponseDto,
-  UserInfoResponseDto,
-  UserResponseDto
-} from '../dtos/api.dto'
+import type { LoginRequest, LoginResponse, UserResponse } from '../dtos/api.dto'
+import { InvalidCredentialsError, AuthenticationError } from '../../domain/exceptions/authentication.error'
+import { API_ENDPOINTS } from '../config/api-endpoints'
 
 export class HttpAuthRepository implements AuthRepository {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      const requestData: LoginDto = {
-        email: credentials.email,
-        password: credentials.password
+      const loginRequest: LoginRequest = { 
+        email: credentials.email, 
+        password: credentials.password 
       }
-
-      const response = await httpClient.post<LoginResponseDto>('/auth/login', requestData)
       
-      // Avec les cookies, pas besoin de stocker manuellement le token
-      // Le serveur définit automatiquement les cookies httpOnly
+      const response = await httpClient.post<LoginResponse>(API_ENDPOINTS.AUTH.LOGIN, loginRequest)
       
-      // Convertir UserResponseDto en AuthEntity
-      const authUser = this.mapUserResponseDtoToAuthEntity(response.data.user)
-      
-      // Optionnellement stocker les infos utilisateur en local (sans tokens sensibles)
-      if (credentials.rememberMe) {
-        localStorage.setItem('user_data', JSON.stringify({
-          id: response.data.user.id,
-          email: response.data.user.email,
-          name: response.data.user.name,
-          role: response.data.user.role
-        }))
+      // Stocker l'access token si nécessaire (pour les headers futurs ou fallback)
+      if (response.data.accessToken) {
+        localStorage.setItem('accessToken', response.data.accessToken)
+        httpClient.setAuthToken(response.data.accessToken)
       }
-
+      
+      const authUser = this.mapUserResponseToAuthUser(response.data.user)
+      const tokens = this.mapLoginResponseToTokens(response.data)
+      
       return {
         user: authUser,
-        tokens: {
-          accessToken: 'cookie-based', // Token géré par cookie
-          refreshToken: 'cookie-based', // Token géré par cookie
-          expiresIn: response.data.expires_in
-        }
+        tokens
       }
-    } catch (error) {
-      console.error('Login failed:', error)
-      throw new Error('Invalid email or password')
+    } catch (error: unknown) {
+      const httpError = error as { status?: number; message?: string }
+      if (httpError.status === 401) {
+        throw new InvalidCredentialsError()
+      }
+      throw new AuthenticationError(`Erreur lors de la connexion: ${httpError.message || 'Erreur inconnue'}`)
     }
   }
 
   async logout(): Promise<void> {
     try {
-      await httpClient.post('/auth/logout')
-    } catch (error) {
-      console.error('Logout error:', error)
-    } finally {
-      // Nettoyer le localStorage
-      localStorage.removeItem('user_data')
-      // Les cookies sont automatiquement supprimés côté serveur
-    }
-  }
-
-  async refreshToken(): Promise<AuthResponse> {
-    try {
-      // Avec les cookies, le refresh est automatique
-      const response = await httpClient.post<RefreshTokenResponseDto>('/auth/refresh')
-      
-      // Récupérer les infos utilisateur actuelles
-      const currentUser = await this.getCurrentUser()
-      if (!currentUser) {
-        throw new Error('No user data found after token refresh')
-      }
-
-      return {
-        user: currentUser,
-        tokens: {
-          accessToken: 'cookie-based',
-          refreshToken: 'cookie-based', 
-          expiresIn: response.data.expires_in
-        }
-      }
-    } catch (error) {
-      console.error('Token refresh failed:', error)
-      // En cas d'échec, nettoyer la session
-      this.logout()
-      throw new Error('Token refresh failed')
+      await httpClient.post(API_ENDPOINTS.AUTH.LOGOUT, {})
+      localStorage.removeItem('accessToken')
+      httpClient.removeAuthToken()
+    } catch (error: unknown) {
+      // Même si la déconnexion côté serveur échoue, on nettoie côté client
+      localStorage.removeItem('accessToken')
+      httpClient.removeAuthToken()
+      const httpError = error as { message?: string }
+      throw new AuthenticationError(`Erreur lors de la déconnexion: ${httpError.message || 'Erreur inconnue'}`)
     }
   }
 
   async getCurrentUser(): Promise<AuthUser | null> {
     try {
-      // Essayer d'abord avec l'API (les cookies sont inclus automatiquement)
-      const response = await httpClient.get<UserInfoResponseDto>('/auth/me')
-      return this.mapUserResponseDtoToAuthEntity(response.data)
-    } catch (error) {
-      console.error('Get current user failed:', error)
-      // Si l'API échoue, essayer de récupérer depuis localStorage
-      const userData = localStorage.getItem('user_data')
-      if (userData) {
-        try {
-          const user = JSON.parse(userData) as UserResponseDto
-          return this.mapUserResponseDtoToAuthEntity(user)
-        } catch (parseError) {
-          console.error('Failed to parse user data:', parseError)
-          // Nettoyer les données corrompues
-          this.logout()
-        }
+      // Essayer d'abord avec un endpoint /me s'il existe, sinon utiliser les infos du token
+      const response = await httpClient.get<UserResponse>(API_ENDPOINTS.AUTH.ME)
+      return this.mapUserResponseToAuthUser(response.data)
+    } catch (error: unknown) {
+      const httpError = error as { status?: number }
+      if (httpError.status === 401) {
+        return null
       }
-      
-      return null
+      const errorMessage = (error as { message?: string }).message
+      throw new AuthenticationError(`Erreur lors de la récupération de l'utilisateur: ${errorMessage || 'Erreur inconnue'}`)
     }
   }
 
-  async validateToken(): Promise<boolean> {
+  async refreshToken(refreshToken?: string): Promise<AuthResponse> {
     try {
-      // Avec les cookies, la validation se fait automatiquement
-      await httpClient.get('/auth/validate')
-      return true
-    } catch (error) {
-      console.error('Token validation failed:', error)
+      const response = await httpClient.post<{accessToken: string}>(API_ENDPOINTS.AUTH.REFRESH, {})
+      
+      if (response.data.accessToken) {
+        localStorage.setItem('accessToken', response.data.accessToken)
+        httpClient.setAuthToken(response.data.accessToken)
+      }
+      
+      // Récupérer les infos utilisateur à jour
+      const currentUser = await this.getCurrentUser()
+      if (!currentUser) {
+        throw new AuthenticationError('Impossible de récupérer les informations utilisateur après le refresh')
+      }
+      
+      return {
+        user: currentUser,
+        tokens: {
+          accessToken: response.data.accessToken,
+          refreshToken: refreshToken || '', // Le serveur ne renvoie pas de refresh token
+          expiresIn: 3600 // Valeur par défaut, pourrait être configurée
+        }
+      }
+    } catch (error: unknown) {
+      localStorage.removeItem('accessToken')
+      httpClient.removeAuthToken()
+      const errorMessage = (error as { message?: string }).message
+      throw new AuthenticationError(`Erreur lors du rafraîchissement du token: ${errorMessage || 'Erreur inconnue'}`)
+    }
+  }
+
+  async validateToken(_token?: string): Promise<boolean> {
+    try {
+      const currentUser = await this.getCurrentUser()
+      return currentUser !== null
+    } catch {
       return false
     }
   }
 
-  private mapUserResponseDtoToAuthEntity(userDto: UserResponseDto): AuthEntity {
+  private mapUserResponseToAuthUser(userResponse: UserResponse): AuthUser {
     return new AuthEntity(
-      userDto.id,
-      userDto.email,
-      userDto.name,
-      userDto.role,
-      undefined, // avatar n'est pas dans le DTO selon Swagger
-      userDto.lastLoginAt ? new Date(userDto.lastLoginAt) : undefined
+      userResponse.id,
+      userResponse.email,
+      userResponse.name,
+      this.mapApiRoleToDomainRole(userResponse.role),
+      undefined, // avatar pas dans l'API
+      new Date(userResponse.updatedAt) // lastLoginAt approximé
     )
+  }
+
+  private mapLoginResponseToTokens(loginResponse: LoginResponse): AuthTokens {
+    return {
+      accessToken: loginResponse.accessToken,
+      refreshToken: '', // Le serveur ne renvoie pas de refresh token selon le Swagger
+      expiresIn: 3600 // Valeur par défaut, pourrait être configurée
+    }
+  }
+
+  private mapApiRoleToDomainRole(role: string): string {
+    // Mapping entre les rôles de l'API et du domain pour AuthEntity
+    switch (role) {
+      case 'SUPER_ADMIN':
+        return 'admin'
+      case 'MANAGER':
+        return 'moderator'
+      case 'USER':
+        return 'user'
+      default:
+        return 'user'
+    }
   }
 }

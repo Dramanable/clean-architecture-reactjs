@@ -1,3 +1,5 @@
+import { API_ENDPOINTS, HTTP_CONFIG, AUTH_CONFIG } from '../config/api-endpoints'
+
 export interface HttpResponse<T = unknown> {
   data: T
   status: number
@@ -14,16 +16,16 @@ export class HttpClient {
   private baseURL: string
   private defaultHeaders: Record<string, string>
 
-  constructor(baseURL: string) {
+  constructor(baseURL: string = API_ENDPOINTS.BASE_URL) {
     this.baseURL = baseURL.replace(/\/$/, '') // Remove trailing slash
-    this.defaultHeaders = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    }
+    this.defaultHeaders = { ...HTTP_CONFIG.HEADERS }
   }
 
   setAuthToken(token: string) {
-    this.defaultHeaders['Authorization'] = `Bearer ${token}`
+    // Pour l'authentification par cookies, on peut stocker le token pour des cas spéciaux
+    if (AUTH_CONFIG.STORE_ACCESS_TOKEN) {
+      this.defaultHeaders['Authorization'] = `Bearer ${token}`
+    }
   }
 
   removeAuthToken() {
