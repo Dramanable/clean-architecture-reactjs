@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Navigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
@@ -8,9 +9,11 @@ import { Checkbox } from '../components/ui/checkbox'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Loader2, Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/shared/hooks/use-auth'
+import { LanguageSelector } from '../components/common/LanguageSelector'
 import type { LoginCredentials } from '@/domain/entities/auth.entity'
 
 export function LoginPage() {
+  const { t } = useTranslation()
   const { login, isAuthenticated, isLoading } = useAuth()
   const [formData, setFormData] = useState<LoginCredentials>({
     email: '',
@@ -45,7 +48,7 @@ export function LoginPage() {
       await login(formData)
       // La redirection sera gérée par le Navigate ci-dessus
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue')
+      setError(err instanceof Error ? err.message : t('auth.loginError'))
     } finally {
       setIsSubmitting(false)
     }
@@ -56,7 +59,7 @@ export function LoginPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="flex items-center space-x-2">
           <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Chargement...</span>
+          <span>{t('common.loading')}</span>
         </div>
       </div>
     )
@@ -65,16 +68,21 @@ export function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
       <div className="w-full max-w-md">
+        {/* Language Selector */}
+        <div className="flex justify-end mb-4">
+          <LanguageSelector />
+        </div>
+
         <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm dark:bg-gray-800/80">
           <CardHeader className="space-y-1 text-center">
             <div className="mx-auto w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mb-4">
               <Lock className="w-6 h-6 text-white" />
             </div>
             <CardTitle className="text-2xl font-bold">
-              Administration
+              {t('auth.administration')}
             </CardTitle>
             <CardDescription className="text-gray-600 dark:text-gray-400">
-              Connectez-vous à votre espace d'administration
+              {t('auth.loginDescription')}
             </CardDescription>
           </CardHeader>
 
@@ -88,14 +96,14 @@ export function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('auth.email')}</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="email"
                     name="email"
                     type="email"
-                    placeholder="votre@email.com"
+                    placeholder={t('auth.emailPlaceholder')}
                     value={formData.email}
                     onChange={handleInputChange}
                     required
@@ -106,14 +114,14 @@ export function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Mot de passe</Label>
+                <Label htmlFor="password">{t('auth.password')}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Votre mot de passe"
+                    placeholder={t('auth.passwordPlaceholder')}
                     value={formData.password}
                     onChange={handleInputChange}
                     required
@@ -146,7 +154,7 @@ export function LoginPage() {
                   disabled={isSubmitting}
                 />
                 <Label htmlFor="rememberMe" className="text-sm font-normal">
-                  Se souvenir de moi
+                  {t('auth.rememberMe')}
                 </Label>
               </div>
 
@@ -158,10 +166,10 @@ export function LoginPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Connexion...
+                    {t('auth.loggingIn')}
                   </>
                 ) : (
-                  'Se connecter'
+                  t('auth.login')
                 )}
               </Button>
             </form>
@@ -169,16 +177,16 @@ export function LoginPage() {
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
               <div className="text-center space-y-2">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Comptes de démonstration :
+                  {t('auth.demoAccounts')}
                 </p>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="bg-gray-50 dark:bg-gray-700 p-2 rounded">
-                    <p className="font-medium">Admin</p>
+                    <p className="font-medium">{t('roles.admin')}</p>
                     <p>admin@example.com</p>
                     <p>admin123</p>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-700 p-2 rounded">
-                    <p className="font-medium">User</p>
+                    <p className="font-medium">{t('roles.user')}</p>
                     <p>user@example.com</p>
                     <p>user123</p>
                   </div>

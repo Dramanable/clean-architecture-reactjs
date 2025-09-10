@@ -1,0 +1,120 @@
+{
+  "auth": {
+    "login": "Connexion",
+    "logout": "Déconnexion",
+    "email": "Email",
+    "password": "Mot de passe",
+    "emailPlaceholder": "Saisissez votre email",
+    "passwordPlaceholder": "Saisissez votre mot de passe",
+    "signin": "Se connecter",
+    "signout": "Se déconnecter",
+    "welcome": "Bienvenue",
+    "administration": "Administration",
+    "loginDescription": "Connectez-vous à votre compte administrateur",
+    "rememberMe": "Se souvenir de moi",
+    "forgotPassword": "Mot de passe oublié ?",
+    "loggingIn": "Connexion en cours...",
+    "demoAccounts": "Comptes de démonstration :",
+    "invalidCredentials": "Identifiants invalides",
+    "authenticationError": "Erreur d'authentification",
+    "loginError": "Erreur de connexion",
+    "logoutSuccess": "Déconnexion réussie",
+    "logoutError": "Erreur lors de la déconnexion"
+  },
+  "navigation": {
+    "dashboard": "Tableau de bord",
+    "users": "Utilisateurs",
+    "settings": "Paramètres"
+  },
+  "errors": {
+    "loginFailed": "Erreur lors de la connexion: {{message}}",
+    "logoutFailed": "Erreur lors de la déconnexion: {{message}}",
+    "userFetchFailed": "Erreur lors de la récupération de l'utilisateur: {{message}}",
+    "refreshFailed": "Erreur lors du rafraîchissement du token: {{message}}",
+    "userInfoUnavailable": "Impossible de récupérer les informations utilisateur après le refresh",
+    "unknownError": "Erreur inconnue",
+    "emailAlreadyExists": "Un utilisateur avec cet email existe déjà",
+    "invalidEmailFormat": "Format d'email invalide",
+    "nameMinLength": "Le nom doit contenir au moins 2 caractères",
+    "userCreationFailed": "Erreur lors de la création de l'utilisateur",
+    "userUpdateFailed": "Erreur lors de la modification de l'utilisateur",
+    "userDeleteFailed": "Erreur lors de la suppression de l'utilisateur",
+    "userNotFound": "Utilisateur introuvable"
+  },
+  "common": {
+    "adminPanel": "Panneau d'Administration",
+    "search": "Rechercher",
+    "user": "Utilisateur",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "view": "Voir",
+    "actions": "Actions",
+    "yes": "Oui",
+    "no": "Non",
+    "confirm": "Confirmer",
+    "dismiss": "Fermer"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "welcome": "Bienvenue sur le tableau de bord"
+  },
+  "users": {
+    "title": "Utilisateurs",
+    "description": "Gérer les utilisateurs du système",
+    "list": "Liste des utilisateurs",
+    "listDescription": "{{count}} utilisateur(s) au total",
+    "create": "Créer un utilisateur",
+    "edit": "Modifier l'utilisateur",
+    "delete": "Supprimer l'utilisateur",
+    "name": "Nom",
+    "email": "Email",
+    "role": "Rôle",
+    "status": "Statut",
+    "createdAt": "Créé le",
+    "updatedAt": "Modifié le",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "searchPlaceholder": "Rechercher par nom ou email...",
+    "noUsersFound": "Aucun utilisateur trouvé",
+    "noResultsFound": "Aucun résultat pour cette recherche",
+    "pagination": {
+      "showing": "Affichage de {{start}} à {{end}} sur {{total}} utilisateurs",
+      "page": "Page {{current}} sur {{total}}",
+      "previous": "Précédent",
+      "next": "Suivant"
+    },
+    "filters": {
+      "advanced": "Filtres avancés",
+      "active": "Actifs",
+      "reset": "Réinitialiser",
+      "title": "Filtres de recherche",
+      "description": "Affinez votre recherche avec les filtres ci-dessous",
+      "roles": "Rôles",
+      "status": "Statut",
+      "allStatuses": "Tous les statuts",
+      "createdAfter": "Créé après le",
+      "createdBefore": "Créé avant le",
+      "selectStatus": "Sélectionner un statut",
+      "pickDate": "Choisir une date"
+    }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "preferences": "Préférences",
+    "profile": "Profil",
+    "language": "Langue",
+    "theme": "Thème"
+  },
+  "roles": {
+    "admin": "Administrateur",
+    "manager": "Gestionnaire",
+    "user": "Utilisateur",
+    "moderator": "Modérateur",
+    "superadmin": "Super Administrateur"
+  }
+}

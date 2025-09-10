@@ -2,9 +2,15 @@ import type { AuthRepository } from '../../domain/repositories/auth.repository'
 import type { AuthUser, LoginCredentials, AuthResponse, AuthTokens } from '../../domain/entities/auth.entity'
 import { AuthEntity } from '../../domain/entities/auth.entity'
 import { httpClient } from '../http/http-client'
-import type { LoginRequest, LoginResponse, UserResponse } from '../dtos/api.dto'
+import type { 
+  UserResponse, 
+  UserRole,
+  LoginRequest,
+  LoginResponse
+} from '../dtos/api.dto'
 import { InvalidCredentialsError, AuthenticationError } from '../../domain/exceptions/authentication.error'
 import { API_ENDPOINTS } from '../config/api-endpoints'
+import i18n from '../../i18n'
 
 export class HttpAuthRepository implements AuthRepository {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
@@ -16,12 +22,7 @@ export class HttpAuthRepository implements AuthRepository {
       
       const response = await httpClient.post<LoginResponse>(API_ENDPOINTS.AUTH.LOGIN, loginRequest)
       
-      // Stocker l'access token si nécessaire (pour les headers futurs ou fallback)
-      if (response.data.accessToken) {
-        localStorage.setItem('accessToken', response.data.accessToken)
-        httpClient.setAuthToken(response.data.accessToken)
-      }
-      
+      // Pas de stockage localStorage - l'authentification se fait par cookies seulement
       const authUser = this.mapUserResponseToAuthUser(response.data.user)
       const tokens = this.mapLoginResponseToTokens(response.data)
       
@@ -34,74 +35,84 @@ export class HttpAuthRepository implements AuthRepository {
       if (httpError.status === 401) {
         throw new InvalidCredentialsError()
       }
-      throw new AuthenticationError(`Erreur lors de la connexion: ${httpError.message || 'Erreur inconnue'}`)
+      throw new AuthenticationError(i18n.t('errors.loginFailed', { message: httpError.message || i18n.t('errors.unknownError') }))
     }
   }
 
   async logout(): Promise<void> {
     try {
-      await httpClient.post(API_ENDPOINTS.AUTH.LOGOUT, {})
-      localStorage.removeItem('accessToken')
+      await httpClient.get(API_ENDPOINTS.AUTH.LOGOUT)
+      // Pas de nettoyage localStorage - l'authentification se fait par cookies seulement
       httpClient.removeAuthToken()
     } catch (error: unknown) {
       // Même si la déconnexion côté serveur échoue, on nettoie côté client
-      localStorage.removeItem('accessToken')
       httpClient.removeAuthToken()
       const httpError = error as { message?: string }
-      throw new AuthenticationError(`Erreur lors de la déconnexion: ${httpError.message || 'Erreur inconnue'}`)
+      throw new AuthenticationError(i18n.t('errors.logoutFailed', { message: httpError.message || i18n.t('errors.unknownError') }))
     }
   }
 
   async getCurrentUser(): Promise<AuthUser | null> {
     try {
-      // Essayer d'abord avec un endpoint /me s'il existe, sinon utiliser les infos du token
-      const response = await httpClient.get<UserResponse>(API_ENDPOINTS.AUTH.ME)
-      return this.mapUserResponseToAuthUser(response.data)
+      // L'endpoint /auth/me renvoie une structure { user: { id, email, name, role } }
+      const response = await httpClient.get<{ user: { id: string; email: string; name: string; role: string } }>(API_ENDPOINTS.AUTH.ME)
+      
+      // Mapper la réponse au format UserResponse attendu
+      const userResponse: UserResponse = {
+        id: response.data.user.id,
+        email: response.data.user.email,
+        name: response.data.user.name,
+        role: response.data.user.role as UserRole,
+        isActive: true, // Valeur par défaut (si l'utilisateur peut se connecter, il est actif)
+        createdAt: new Date().toISOString(), // Non fourni par /auth/me
+        updatedAt: new Date().toISOString()  // Non fourni par /auth/me
+      }
+      
+      return this.mapUserResponseToAuthUser(userResponse)
     } catch (error: unknown) {
       const httpError = error as { status?: number }
       if (httpError.status === 401) {
         return null
       }
       const errorMessage = (error as { message?: string }).message
-      throw new AuthenticationError(`Erreur lors de la récupération de l'utilisateur: ${errorMessage || 'Erreur inconnue'}`)
+      throw new AuthenticationError(i18n.t('errors.userFetchFailed', { message: errorMessage || i18n.t('errors.unknownError') }))
     }
   }
 
   async refreshToken(refreshToken?: string): Promise<AuthResponse> {
     try {
-      const response = await httpClient.post<{accessToken: string}>(API_ENDPOINTS.AUTH.REFRESH, {})
+      const response = await httpClient.get<{accessToken: string}>(API_ENDPOINTS.AUTH.REFRESH)
       
-      if (response.data.accessToken) {
-        localStorage.setItem('accessToken', response.data.accessToken)
-        httpClient.setAuthToken(response.data.accessToken)
-      }
+      // Pas de stockage localStorage - l'authentification se fait par cookies seulement
+      // Le serveur met à jour les cookies automatiquement
       
       // Récupérer les infos utilisateur à jour
       const currentUser = await this.getCurrentUser()
       if (!currentUser) {
-        throw new AuthenticationError('Impossible de récupérer les informations utilisateur après le refresh')
+        throw new AuthenticationError(i18n.t('errors.userInfoUnavailable'))
       }
       
       return {
         user: currentUser,
         tokens: {
-          accessToken: response.data.accessToken,
+          accessToken: response.data.accessToken || '', // Token fourni mais pas stocké
           refreshToken: refreshToken || '', // Le serveur ne renvoie pas de refresh token
           expiresIn: 3600 // Valeur par défaut, pourrait être configurée
         }
       }
     } catch (error: unknown) {
-      localStorage.removeItem('accessToken')
+      // Pas de nettoyage localStorage - seul nettoyage des headers si nécessaire
       httpClient.removeAuthToken()
       const errorMessage = (error as { message?: string }).message
-      throw new AuthenticationError(`Erreur lors du rafraîchissement du token: ${errorMessage || 'Erreur inconnue'}`)
+      throw new AuthenticationError(i18n.t('errors.refreshFailed', { message: errorMessage || i18n.t('errors.unknownError') }))
     }
   }
 
-  async validateToken(_token?: string): Promise<boolean> {
+  async validateToken(): Promise<boolean> {
     try {
-      const currentUser = await this.getCurrentUser()
-      return currentUser !== null
+      // Pour l'authentification par cookies, on essaie d'appeler /auth/me
+      const user = await this.getCurrentUser()
+      return user !== null
     } catch {
       return false
     }

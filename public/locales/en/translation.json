@@ -1,0 +1,120 @@
+{
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "emailPlaceholder": "Enter your email",
+    "passwordPlaceholder": "Enter your password",
+    "signin": "Sign In",
+    "signout": "Sign Out",
+    "welcome": "Welcome",
+    "administration": "Administration",
+    "loginDescription": "Sign in to your administrator account",
+    "rememberMe": "Remember me",
+    "forgotPassword": "Forgot password?",
+    "loggingIn": "Signing in...",
+    "demoAccounts": "Demo accounts:",
+    "invalidCredentials": "Invalid credentials",
+    "authenticationError": "Authentication error",
+    "loginError": "Login error",
+    "logoutSuccess": "Successfully logged out",
+    "logoutError": "Error during logout"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "settings": "Settings"
+  },
+  "errors": {
+    "loginFailed": "Login error: {{message}}",
+    "logoutFailed": "Logout error: {{message}}",
+    "userFetchFailed": "Error fetching user: {{message}}",
+    "refreshFailed": "Token refresh error: {{message}}",
+    "userInfoUnavailable": "Unable to retrieve user information after refresh",
+    "unknownError": "Unknown error",
+    "emailAlreadyExists": "A user with this email already exists",
+    "invalidEmailFormat": "Invalid email format",
+    "nameMinLength": "Name must contain at least 2 characters",
+    "userCreationFailed": "Error creating user",
+    "userUpdateFailed": "Error updating user",
+    "userDeleteFailed": "Error deleting user",
+    "userNotFound": "User not found"
+  },
+  "common": {
+    "adminPanel": "Admin Panel",
+    "search": "Search",
+    "user": "User",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "actions": "Actions",
+    "yes": "Yes",
+    "no": "No",
+    "confirm": "Confirm",
+    "dismiss": "Dismiss"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome to the dashboard"
+  },
+  "users": {
+    "title": "Users",
+    "description": "Manage system users",
+    "list": "Users List",
+    "listDescription": "{{count}} user(s) total",
+    "create": "Create User",
+    "edit": "Edit User",
+    "delete": "Delete User",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "status": "Status",
+    "createdAt": "Created at",
+    "updatedAt": "Updated at",
+    "active": "Active",
+    "inactive": "Inactive",
+    "searchPlaceholder": "Search by name or email...",
+    "noUsersFound": "No users found",
+    "noResultsFound": "No results found for this search",
+    "pagination": {
+      "showing": "Showing {{start}} to {{end}} of {{total}} users",
+      "page": "Page {{current}} of {{total}}",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "filters": {
+      "advanced": "Advanced Filters",
+      "active": "Active",
+      "reset": "Reset",
+      "title": "Search Filters",
+      "description": "Refine your search with the filters below",
+      "roles": "Roles",
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "createdAfter": "Created after",
+      "createdBefore": "Created before",
+      "selectStatus": "Select a status",
+      "pickDate": "Pick a date"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "preferences": "Preferences",
+    "profile": "Profile",
+    "language": "Language",
+    "theme": "Theme"
+  },
+  "roles": {
+    "admin": "Administrator",
+    "manager": "Manager",
+    "user": "User",
+    "moderator": "Moderator",
+    "superadmin": "Super Administrator"
+  }
+}

@@ -2,17 +2,33 @@ import { Bell, Search, LogOut, ChevronDown } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { useAuth } from '@/shared/hooks/use-auth'
+import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { LanguageSelector } from './common/LanguageSelector'
+import { useUserRoleTranslation } from '@/i18n/hooks'
 
 export function Header() {
   const { user, logout } = useAuth()
+  const { t } = useTranslation()
+  const { translateRole } = useUserRoleTranslation()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const navigate = useNavigate()
 
   const handleLogout = async () => {
+    setIsLoggingOut(true)
     try {
       await logout()
+      // Rediriger vers la page de login après une déconnexion réussie
+      navigate('/login')
     } catch (error) {
       console.error('Logout failed:', error)
+      // Même en cas d'erreur, rediriger vers login
+      navigate('/login')
+    } finally {
+      setIsLoggingOut(false)
+      setIsUserMenuOpen(false)
     }
   }
 
@@ -25,7 +41,7 @@ export function Header() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               type="text"
-              placeholder="Rechercher..."
+              placeholder={t('common.search')}
               className="pl-10 pr-4"
             />
           </div>
@@ -33,6 +49,9 @@ export function Header() {
 
         {/* Actions */}
         <div className="flex items-center space-x-4">
+          {/* Language Selector */}
+          <LanguageSelector />
+
           {/* Notifications */}
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="w-5 h-5" />
@@ -61,10 +80,10 @@ export function Header() {
               )}
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  {user?.name || 'Utilisateur'}
+                  {user?.name || t('common.user')}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {user?.role || 'user'}
+                  {user?.role ? translateRole(user.role) : t('common.user')}
                 </p>
               </div>
               <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -84,10 +103,11 @@ export function Header() {
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    disabled={isLoggingOut}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <LogOut className="w-4 h-4 mr-2" />
-                    Se déconnecter
+                    {isLoggingOut ? t('common.loading') : t('auth.logout')}
                   </button>
                 </div>
               </div>

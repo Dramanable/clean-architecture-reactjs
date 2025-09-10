@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { 
   LayoutDashboard, 
   Users, 
@@ -9,20 +10,21 @@ import {
 import { cn } from '@/shared/utils/lib/utils'
 import { Button } from '@/presentation/components/ui/button'
 
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Utilisateurs', href: '/users', icon: Users },
-  { name: 'Paramètres', href: '/settings', icon: Settings },
-]
-
 export function Sidebar() {
+  const { t } = useTranslation()
   const location = useLocation()
+
+  const navigation = [
+    { name: t('navigation.dashboard'), href: '/dashboard', icon: LayoutDashboard },
+    { name: t('navigation.users'), href: '/dashboard/users', icon: Users },
+    { name: t('navigation.settings'), href: '/dashboard/settings', icon: Settings },
+  ]
 
   return (
     <div className="flex flex-col w-64 bg-white shadow-lg">
       {/* Logo */}
       <div className="flex items-center justify-center h-16 px-4 bg-primary">
-        <h1 className="text-xl font-bold text-primary-foreground">Admin Panel</h1>
+        <h1 className="text-xl font-bold text-primary-foreground">{t('common.adminPanel')}</h1>
       </div>
 
       {/* Navigation */}

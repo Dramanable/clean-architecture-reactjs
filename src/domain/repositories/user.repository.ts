@@ -6,9 +6,9 @@ export interface PaginationParams {
 }
 
 export interface UserFilters {
-  role?: string
-  status?: string
-  search?: string
+  searchTerm?: string
+  roles?: string[]
+  isActive?: boolean
   createdAfter?: Date
   createdBefore?: Date
 }

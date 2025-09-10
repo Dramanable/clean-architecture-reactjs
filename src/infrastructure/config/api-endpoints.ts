@@ -7,22 +7,37 @@ export const API_ENDPOINTS = {
   // Authentication endpoints
   AUTH: {
     LOGIN: '/auth/login',           // POST - { email, password } -> { accessToken, user }
-    LOGOUT: '/auth/logout',         // POST - {} -> {}
-    REFRESH: '/auth/refresh',       // POST - {} -> { accessToken }
-    ME: '/auth/me'                  // GET - {} -> UserResponse (à vérifier si existe)
+    LOGOUT: '/auth/logout',         // GET - {} -> {}
+    REFRESH: '/auth/refresh',       // GET - {} -> { accessToken }
+    ME: '/auth/me'                  // GET - {} -> UserResponse
   },
 
   // User management endpoints  
   USERS: {
-    LIST: '/users',                 // GET - ?page&limit&search -> { users, total, page, limit }
+    LIST: '/users',                 // GET - { page, limit, role } -> { users, total, page, limit }
+    SEARCH: '/users/search',        // POST - SearchUsersDto -> { users, pagination }
     CREATE: '/users',               // POST - CreateUserRequest -> UserResponse
-    GET_BY_ID: '/users/:id',        // GET - UserResponse
-    UPDATE: '/users/:id',           // PATCH - UpdateUserRequest -> UserResponse
-    DELETE: '/users/:id'            // DELETE - {}
+    GET_BY_ID: (id: string) => `/users/${id}`,  // GET - UserResponse
+    UPDATE: (id: string) => `/users/${id}`,     // PUT - UpdateUserRequest -> UserResponse  
+    DELETE: (id: string) => `/users/${id}`,     // DELETE - {}
+    COUNT: '/users/count'           // GET - { count: number }
   }
 } as const
 
-// Types pour les paramètres de pagination selon le Swagger
+// Types pour la recherche d'utilisateurs selon le Swagger
+export interface SearchUsersQuery {
+  searchTerm?: string
+  roles?: string[]
+  isActive?: boolean
+  createdAfter?: string
+  createdBefore?: string
+  page?: number
+  limit?: number
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+}
+
+// Types pour les paramètres de pagination
 export interface PaginationQuery {
   page?: number
   limit?: number

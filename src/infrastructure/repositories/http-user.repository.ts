@@ -2,52 +2,95 @@ import type { UserRepository, PaginationParams, UserFilters, PaginatedResult } f
 import type { User } from '../../domain/entities/user.entity'
 import { UserRole, UserStatus, UserEntity } from '../../domain/entities/user.entity'
 import { httpClient } from '../http/http-client'
+import { API_ENDPOINTS } from '../config/api-endpoints'
 import type { 
   UserResponse, 
   CreateUserRequest, 
-  UpdateUserRequest,
-  UsersListResponse
+  UpdateUserRequest
 } from '../dtos/api.dto'
 import { UserRole as ApiUserRole } from '../dtos/api.dto'
+
+// Types pour la requête et réponse selon le vrai serveur
+interface SearchUsersRequest {
+  searchTerm?: string
+  roles?: string[]
+  isActive?: boolean
+  createdAfter?: string
+  createdBefore?: string
+  page?: number
+  limit?: number
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+}
+
+interface SearchUsersResponse {
+  users: UserResponse[]
+  pagination: {
+    totalItems: number
+    itemsPerPage: number
+    currentPage: number
+    totalPages: number
+    hasNextPage: boolean
+    hasPreviousPage: boolean
+  }
+  appliedFilters?: {
+    searchTerm?: string
+    roles?: string[]
+    isActive?: boolean
+    createdAfter?: string
+    createdBefore?: string
+  }
+}
 
 export class HttpUserRepository implements UserRepository {
   async findAll(params: PaginationParams, filters?: UserFilters): Promise<PaginatedResult<User>> {
     try {
-      const queryParams: Record<string, unknown> = {
+      // Construire la requête de recherche selon le format du serveur
+      const searchRequest: SearchUsersRequest = {
+        searchTerm: filters?.searchTerm,
         page: params.page,
-        limit: params.limit
+        limit: params.limit,
+        sortBy: 'createdAt',
+        sortOrder: 'desc'
       }
 
-      if (filters) {
-        if (filters.search) queryParams.search = filters.search
-        if (filters.role) queryParams.role = filters.role
-        if (filters.status) queryParams.status = filters.status
+      // Ajouter les filtres supplémentaires si disponibles
+      if (filters?.roles && filters.roles.length > 0) {
+        searchRequest.roles = filters.roles.map(role => this.mapDomainRoleToApiRole(role as UserRole))
       }
-
-      const response = await httpClient.get<UsersListResponse>('/users', queryParams)
       
-      const users = response.data.users.map(userDto => this.mapUserResponseToUserEntity(userDto))
+      if (filters?.isActive !== undefined) {
+        searchRequest.isActive = filters.isActive
+      }
+
+      if (filters?.createdAfter) {
+        searchRequest.createdAfter = filters.createdAfter.toISOString()
+      }
+
+      if (filters?.createdBefore) {
+        searchRequest.createdBefore = filters.createdBefore.toISOString()
+      }
+
+      const response = await httpClient.post<SearchUsersResponse>(
+        API_ENDPOINTS.USERS.SEARCH, 
+        searchRequest
+      )
+      
+      const users = response.data.users.map((userDto: UserResponse) => this.mapUserResponseToUserEntity(userDto))
       
       return {
         data: users,
-        meta: {
-          currentPage: response.data.page,
-          totalPages: Math.ceil(response.data.total / response.data.limit),
-          totalItems: response.data.total,
-          itemsPerPage: response.data.limit,
-          hasNextPage: response.data.page * response.data.limit < response.data.total,
-          hasPreviousPage: response.data.page > 1
-        }
+        meta: response.data.pagination
       }
     } catch (error) {
-      console.error('Failed to fetch users:', error)
-      throw new Error('Failed to fetch users')
+      console.error('Failed to search users:', error)
+      throw new Error('Failed to search users')
     }
   }
 
   async findById(id: string): Promise<User | null> {
     try {
-      const response = await httpClient.get<UserResponse>(`/users/${id}`)
+      const response = await httpClient.get<UserResponse>(API_ENDPOINTS.USERS.GET_BY_ID(id))
       return this.mapUserResponseToUserEntity(response.data)
     } catch (error) {
       console.error(`Failed to fetch user ${id}:`, error)
@@ -73,7 +116,7 @@ export class HttpUserRepository implements UserRepository {
         role: this.mapDomainRoleToApiRole(userData.role)
       }
 
-      const response = await httpClient.post<UserResponse>('/users', createData)
+      const response = await httpClient.post<UserResponse>(API_ENDPOINTS.USERS.CREATE, createData)
       return this.mapUserResponseToUserEntity(response.data)
     } catch (error) {
       console.error('Failed to create user:', error)
@@ -90,7 +133,7 @@ export class HttpUserRepository implements UserRepository {
         ...(userData.status !== undefined && { isActive: userData.status === 'active' })
       }
 
-      const response = await httpClient.patch<UserResponse>(`/users/${id}`, updateData)
+      const response = await httpClient.put<UserResponse>(API_ENDPOINTS.USERS.UPDATE(id), updateData)
       return this.mapUserResponseToUserEntity(response.data)
     } catch (error) {
       console.error(`Failed to update user ${id}:`, error)
@@ -100,7 +143,7 @@ export class HttpUserRepository implements UserRepository {
 
   async delete(id: string): Promise<void> {
     try {
-      await httpClient.delete(`/users/${id}`)
+      await httpClient.delete(API_ENDPOINTS.USERS.DELETE(id))
     } catch (error) {
       console.error(`Failed to delete user ${id}:`, error)
       throw new Error('Failed to delete user')
@@ -109,7 +152,7 @@ export class HttpUserRepository implements UserRepository {
 
   async count(): Promise<number> {
     try {
-      const response = await httpClient.get<{ count: number }>('/users/count')
+      const response = await httpClient.get<{ count: number }>(API_ENDPOINTS.USERS.COUNT)
       return response.data.count
     } catch (error) {
       console.error('Failed to count users:', error)
@@ -118,7 +161,7 @@ export class HttpUserRepository implements UserRepository {
   }
 
   async search(query: string, params: PaginationParams): Promise<PaginatedResult<User>> {
-    return this.findAll(params, { search: query })
+    return this.findAll(params, { searchTerm: query })
   }
 
   async changePassword(id: string, currentPassword: string, newPassword: string): Promise<boolean> {

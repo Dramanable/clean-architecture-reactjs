@@ -60,7 +60,9 @@ export class InMemoryAuthRepository implements AuthRepository {
     this.currentUser = authUser
     this.accessToken = tokens.accessToken
 
-    // Stocker dans localStorage pour persistance (en production, utiliser des cookies sécurisés)
+    // ATTENTION: Stockage localStorage utilisé pour la démo uniquement
+    // En production, NE JAMAIS stocker les tokens dans localStorage (vulnérabilité XSS)
+    // Utiliser des cookies httpOnly sécurisés côté serveur
     if (credentials.rememberMe) {
       localStorage.setItem('auth_token', tokens.accessToken)
       localStorage.setItem('refresh_token', tokens.refreshToken)

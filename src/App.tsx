@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AdminDashboard } from './presentation/components/AdminDashboard'
 import { LoginPage } from './presentation/pages/LoginPage'
 import { AuthGuard } from './presentation/components/AuthGuard'
+import './i18n' // Initialiser i18n
 
 function App() {
   return (

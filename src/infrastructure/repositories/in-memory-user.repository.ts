@@ -64,14 +64,15 @@ export class InMemoryUserRepository implements UserRepository {
 
     // Appliquer les filtres
     if (filters) {
-      if (filters.role) {
-        filteredUsers = filteredUsers.filter(user => user.role === filters.role)
+      if (filters.roles && filters.roles.length > 0) {
+        filteredUsers = filteredUsers.filter(user => filters.roles!.includes(user.role))
       }
-      if (filters.status) {
-        filteredUsers = filteredUsers.filter(user => user.status === filters.status)
+      if (filters.isActive !== undefined) {
+        const expectedStatus = filters.isActive ? UserStatus.ACTIVE : UserStatus.INACTIVE
+        filteredUsers = filteredUsers.filter(user => user.status === expectedStatus)
       }
-      if (filters.search) {
-        const searchTerm = filters.search.toLowerCase()
+      if (filters.searchTerm) {
+        const searchTerm = filters.searchTerm.toLowerCase()
         filteredUsers = filteredUsers.filter(user =>
           user.name.toLowerCase().includes(searchTerm) ||
           user.email.toLowerCase().includes(searchTerm)
@@ -165,7 +166,7 @@ export class InMemoryUserRepository implements UserRepository {
   }
 
   async search(query: string, params: PaginationParams): Promise<PaginatedResult<User>> {
-    return this.findAll(params, { search: query })
+    return this.findAll(params, { searchTerm: query })
   }
 
   private delay(ms: number): Promise<void> {

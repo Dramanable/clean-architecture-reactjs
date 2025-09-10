@@ -1,12 +1,15 @@
 import type { AuthRepository } from '../../domain/repositories/auth.repository'
 import type { LoginCredentials, AuthResponse, AuthUser } from '../../domain/entities/auth.entity'
 import { LoginUseCase } from '../use-cases/auth/login.use-case'
+import { LogoutUseCase } from '../use-cases/auth/logout.use-case'
 
 export class AuthService {
   private loginUseCase: LoginUseCase
+  private logoutUseCase: LogoutUseCase
 
   constructor(private authRepository: AuthRepository) {
     this.loginUseCase = new LoginUseCase(authRepository)
+    this.logoutUseCase = new LogoutUseCase(authRepository)
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
@@ -14,7 +17,7 @@ export class AuthService {
   }
 
   async logout(): Promise<void> {
-    return this.authRepository.logout()
+    return this.logoutUseCase.execute()
   }
 
   async refreshToken(refreshToken?: string): Promise<AuthResponse> {
